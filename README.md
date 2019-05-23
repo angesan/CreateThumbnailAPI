@@ -1,4 +1,4 @@
-# Backend Application Challenge
+# CreateThumbnailAPI
  
 
 ## Description
