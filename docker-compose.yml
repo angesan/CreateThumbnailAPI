@@ -1,0 +1,55 @@
+version: "3"
+services:
+  rabbitmq-server:
+    container_name: rabbitmq
+    image: rabbitmq:3.7.4-management
+    ports:
+      - '5672:5672'
+      - '15672:15672'
+    healthcheck:
+        test: ["CMD", "curl", "-f", "http://localhost:15672"]
+        interval: 30s
+        timeout: 10s
+        retries: 5
+  api-service:
+    build: ./nodeJSContainer/
+    user: "root"
+    working_dir: /home/node/app
+    depends_on:
+      - rabbitmq-server
+    environment:
+      - NODE_ENV=production
+    volumes:
+      - ./nodeJSContainer/appVolume/:/home/node/app
+      - sharedVolume:/home/node/app/uploads
+    expose:
+      - "8081"
+    ports:
+    - "3000:3000"
+    command: "npm start"
+  worker-service:
+    build: ./workerContainer/
+    working_dir: /usr/src/app
+    depends_on:
+      - rabbitmq-server
+    restart: on-failure
+    command: "bash ./start.sh"
+    environment:
+      - NODE_ENV=production
+    volumes:
+      - ./workerContainer/appVolume/:/usr/src/app
+      - sharedVolume:/usr/src/app/uploads
+  mongoserver:
+    image: mongo
+    restart: always
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: example
+      MONGO_INITDB_DATABASE: imagestate
+    ports:
+      - 27017:27017
+    volumes:
+      - ./mongoContainer/mongo-init.js:/docker-entrypoint-initdb.d/mongo-init.js
+volumes:
+  sharedVolume: 
+    driver: local
